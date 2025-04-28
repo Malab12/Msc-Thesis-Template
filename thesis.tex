@@ -56,21 +56,23 @@
 \usepackage[plainpages=false]{hyperref} 
 
 % Information that will be filled in at various points in the report
-\newcommand{\reportTitle}{WRITE YOUR THESIS TITLE HERE}
-\newcommand{\reportAuthor}{WRITE YOUR NAME AND SURNAME HERE} % Please put your full and official name here: no abbreviations (and to Dutch students: geen roepnamen)
-\newcommand{\studentNumber}{WRITE YOUR TU DELFT STUDENT NUMBER HERE}
-\newcommand{\reportEmailTUD}{REPORT-YOUR-TU-DELFT-EMAIL-FROM-STUDENT-TUDELFT-NL@student.tudelft.nl}
-\newcommand{\reportEmailNonTUD}{REPORT-YOUR-NON-TU-DELFT-EMAIL@some.other.non.tudelft.nl.domain.com}
+\newcommand{\reportTitle}{Predictive Mobility Management for Hybrid Wireless Networks utilizing Narrow-Beam Optical Systems}
+\newcommand{\reportAuthor}{Cleo Barik} % Please put your full and official name here: no abbreviations (and to Dutch students: geen roepnamen)
+\newcommand{\studentNumber}{5981778}
+\newcommand{\reportEmailTUD}{m.s.barik@student.tudelft.nl}
+\newcommand{\reportEmailNonTUD}{malab@outlook.com}
 \newcommand{\reportUrlEmailTUD}{\href{mailto:\reportEmailTUD}{\reportEmailTUD}}
 \newcommand{\reportUrlEmailNonTUD}{\href{mailto:\reportEmailNonTUD}{\reportEmailNonTUD}}
-\newcommand{\reportMSC}{PUT TU DELFT PROGRAM THAT YOU FOLLOWED HERE} % Examples are {Embedded Systems} {Computer Engineering} {Computer Science} or {Electrical Engineering}
+\newcommand{\reportMSC}{Computer and Embedded Systems Engineering} % Examples are {Embedded Systems} {Computer Engineering} {Computer Science} or {Electrical Engineering}
 \newcommand{\reportDate}{PUT DATE OF PROVIDING THESIS TO GRADUATION COMMITTEE HERE}
 \newcommand{\presentationDate}{PUT DATE OF YOUR PRESENTATION HERE}
 \newcommand{\graduationCommittee}{
-PUT THE NAME AND SURNAME OF GRADUATION COMMITTEE MEMBER 1 HERE & Delft University of Technology \\
-PUT THE NAME AND SURNAME OF GRADUATION COMMITTEE MEMBER 2 HERE & Delft University of Technology \\
+Qing Wang & Delft University of Technology \\
+Remco Litjens & Delft University of Technology \\
 % ...
-PUT THE NAME AND SURNAME OF GRADUATION COMMITTEE MEMBER X HERE & Delft University of Technology \\
+Lotte Paulissen & TNO\\
+Haibin Zhang & TNO\\
+
 }
 
 % Provide full name and surname (no abbreviations), so "Koen Langendoen" not "K. Langendoen"
@@ -89,7 +91,11 @@ PUT THE NAME AND SURNAME OF GRADUATION COMMITTEE MEMBER X HERE & Delft Universit
 % prof.\,dr.\,Koen Langendoen (chairman) & Delft University of Technology \\ 
 % dr.\,Przemys{\l}aw Pawe{\l}czak & Delft University of Technology \\ 
 
-\newcommand{\reportAbstract}{WRITE YOUR ABSTRACT HERE}
+\newcommand{\reportAbstract}{ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec id mauris quis urna imperdiet porttitor at eget purus. Proin tincidunt cursus erat non pretium. Integer ullamcorper dui nunc, non vehicula augue facilisis nec. Sed eu eros pretium, aliquam est eu, lacinia lorem. Sed ut sollicitudin velit, eget accumsan nibh. In dapibus lacus ut elit dictum blandit. Nullam rutrum dolor ac tellus imperdiet fermentum. Donec et semper nibh.
+
+Morbi porta libero ac est tincidunt elementum. Suspendisse in risus tincidunt ex tristique mollis et vitae diam. Pellentesque ligula nibh, dapibus nec augue quis, venenatis rhoncus velit. Etiam auctor quam quis tortor accumsan, tincidunt fermentum dui lacinia. Proin mattis congue tempor. Sed hendrerit augue tristique dui porta tristique. Integer tempus gravida mi vel hendrerit. In ullamcorper quam auctor, rutrum justo vel, dignissim sem. Etiam tincidunt felis tortor, a auctor sapien varius id.
+
+Praesent ligula metus, egestas eget auctor vitae, pretium vel erat. Sed efficitur fermentum ornare. Cras quis magna id quam varius imperdiet. Phasellus condimentum rhoncus neque, quis tempor turpis molestie a. Ut a efficitur nibh, quis scelerisque nulla. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Curabitur sed ipsum id dui accumsan condimentum id a ligula. Quisque id arcu at enim molestie accumsan non sit amet nulla. Pellentesque scelerisque, est non pharetra ultricies, metus lacus interdum leo, quis mollis arcu lectus in turpis. Nam ut sagittis purus. Suspendisse eget nibh at sapien vulputate mollis. Aliquam diam ipsum, suscipit nec odio ut, vehicula congue augue. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Nam volutpat urna eu nisl rutrum, eget euismod ipsum consectetur.}
 
 \newcommand{\reportKeywords}{LIST YOUR KEYWORDS HERE}
 
@@ -163,8 +169,9 @@ PUT THE NAME AND SURNAME OF GRADUATION COMMITTEE MEMBER X HERE & Delft Universit
 \include{introduction}
 
 % Create chapters
-\input{chapters/chapter_1}
-%\input{chapters/chapter_2}
+% \input{chapters/chapter_1}
+
+\input{chapters/problem_statement}
 % ...
 %\nput{chapters/chapter_X}
 
