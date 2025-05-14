@@ -1,25 +1,17 @@
-\chapter{Problem Statement and Heuristic Solution}
+\chapter{Algorithm to optimize mobility management}
 \label{chp:problem_statement}
 
-This chapter describes the details and design considerations of the algorithm presented for solving the problem of optimal mobility management in narrow beam systems. INN Section~\ref{subsec:algo_overview}, examples are given on how to use tables and figures in this MSc thesis.
-
-\section{Scoping the problem}
-\label{sec:scope}
-\section{User Localization using the optical network}
-\label{sec:loc_calc}
-\section{Algorithm to optimize mobility management}
-\label{sec:algorithm}
-Below, we present the algorithm for solving the problem of predictive mobility management. The strategy operates separately for each user, optimizing for maximizing throughput and minimizing latency.
-\subsection{High level overview}
+This chapter describes the details and design considerations of the algorithm presented for solving the problem of optimal mobility management in narrow beam systems. The strategy operates separately for each user, optimizing for maximizing throughput and minimizing latency.
+\section{High level overview}
 Before going in-depth into the algorithm's workings, we present a high-level overview of the handover strategy, specifying the inputs and outputs of the system. Figure~\ref{fig:algo-overview} provides a high-level graphical algorithm overview. Section~\ref{subsec:algo_exp} explains each component in detail in the order of their execution.
-\subsubsection{Inputs}
+\subsection{Inputs}
 \begin{itemize}
     \item \textbf{User position:} Coordinates of the UE based on the localization method described in Section~\ref{sec:loc_calc}
     \item \textbf{User velocity:} Recorded by the UE as the change in position. 
     \item \textbf{Current Serving AP/Beam:} The current optical beam or RF AP serving the UE when the handover procedure is initiated.
     \item \textbf{RSRP report:} An array storing the RSRP measurements recorded by the user for every available optical beam which can be detected by the UE and the RF AP
 \end{itemize}
-\subsubsection{Outputs}
+\subsection{Outputs}
 The algorithm generates a single output:
 \begin{itemize}
     \item \textbf{Choice:} the specific AP which the user needs to be switched to to maintain consistent connectivity with the network.
@@ -32,17 +24,17 @@ The algorithm generates a single output:
     \label{fig:algo-overview}
 \end{figure}
 
-% \subsubsection{Sub-components}
+% \subsection{Sub-components}
 % The workings of the algorithm are broadly classified into a pre-process and two consecutive blocks:
 % \begin{itemize}
-%     \item \textbf{Handover trigger:} Pre-conditions reported by the UE to the network with inputs as described in Subsection~\ref{subsec:algo_overview} which trigger the handover strategy.
+%     \item \textbf{Handover trigger:} Pre-conditions reported by the UE to the network with inputs as described in section~\ref{subsec:algo_overview} which trigger the handover strategy.
 %     \item \textbf{Initialization of parameters:} Initialization of meta-parameters dictating the characteristics of a specific instance of the handover decision.
 %     \item \textbf{Prediction phase:} The algorithm makes predictions 
 %     \item Decision phase
 \label{subsec:algo_overview}
-\subsection{Detailed explanation}
+\section{Detailed explanation}
 \label{subsec:algo_exp}
-\subsubsection{Handover trigger}
+\subsection{Handover trigger}
 The handover algorithm follows a trigger-based strategy. This means that the handover process is only initiated when specific events occur or conditions are fulfilled. In this case, the specific trigger for initiating a handover is when RSRP measurements by the UE indicate that non-serving optical beam/RF AP is providing a higher SINR than that of the current serving optical beam or RF AP. The optical and RF networks periodically send reference signals, which are then utilized to calculate the RSRP measurements. The reference signals sent by the optical network also allow for the UE location to be tracked. The centers of the 3 beams providing the highest SINRs act as the end points for triangulation. Since the reference signals are sent continuously with a set period interval, a change in location between two consecutive measurements can be used to derive the velocity of the UE. The UE sends the RSRP measurements back to the network as an RSRP report. The network utilizes the UE measurement report to derive the most up-to-date location, velocity, and acceleration values. It then decides whether a handover process should be initiated. Figure~\ref{fig: handover-trigger} provides a graphical explanation of the handover trigger process.
 % 
 \begin{figure}
@@ -52,14 +44,14 @@ The handover algorithm follows a trigger-based strategy. This means that the han
     \label{fig: handover-trigger}
 \end{figure}
 
-\subsubsection{Parameters of the algorithm}
+\subsection{Parameters of the algorithm}
 \label{subsubsec:param_init}
 We first perform setup for certain parameters characterizing a specific instance of the handover algorithm. These parameters together impact and define the behavior of the selection logic:
 \begin{enumerate}
     \item \textbf{Network selection coefficient $\lambda$:} Beyond a certain velocity of the user, it is no longer feasible for the optical network to adequately keep up with the user and provide consistent connectivity. In such situations, the algorithm must switch the UE to the RF Network. This is mathematically modeled by the network selection coefficient. It is a scalar that indicates the system's preference for the RF network over optical. Higher the velocity of the user, the higher is the value of the scaler.
     \item \textbf{Prediction window size $\eta$:} Vertical handovers require more time to perform due to the change in transmission interface. As such, the algorithm must be sure that it would still be most optimal for the user to be connected to the RF network by the time the handover completes. The prediction window size provides a dynamic way of adjusting how far in advance the algorithm will make estimations before making a decision. Vertical Handovers require a larger window size than horizontal handovers. 
 \end{enumerate}
-\subsection{Initialization phase}
+\section{Initialization phase}
 When a handover condition is triggered, certain variables in the algorithm are initialized first. These are as follows:
 \begin{enumerate}
     \item \textbf{Current step $k:$} For window size $\eta$, let $k$ represent the individual time-slot within the window where $1 \leq k \leq \eta$ and $k$ starts at 1. 
@@ -68,7 +60,7 @@ When a handover condition is triggered, certain variables in the algorithm are i
     \item \textbf{Score:} Score is an array that keeps track of the SINR measurements throughout the execution of the algorithm. It is analyzed in the decision phase to determine which AP/beam to switch the user to. Let $\alpha$ and $\beta$ represent the total number of Optical beams and the total number of RF APs in the system. Thus, Score is an array of length $(\alpha + \beta)$. Optical beams are identified by index $i \in [0, \alpha)$ while RF APs are identified by the index $i \in [\alpha, \alpha + \beta)$. Score is initialized as a null array containing all zeroes.
     \item \textbf{Decay constant d:} further the algorithm moves in the future, the more dependent the estimation becomes on previous predictions. In turn, the probability of the estimation deviating from ground reality increases. To compensate for such a potential error, We utilize exponential decay on the score per timeslot. Thus, as the predictions move further in the future, their impact on the score and thus the final decision reduces as well.
 \end{enumerate}
-\subsection{Prediction phase}
+\section{Prediction phase}
 As long as we have not iterated through the entire prediction window $(k < \eta)$, for each slot we do the following:
 \begin{enumerate}
     \item Predict the location at the $k+1$th slot. The short-term prediction is given by (\ref{eq:algo_pred-loc}). Here, $v(t_k)$ and $a(t_k)$ represent the derived velocity and acceleration of the UE in slot $k$ respectively.
@@ -100,14 +92,14 @@ Figure~\ref{fig:algo-prediction} showcases an overview of operations that take p
     \caption{Prediction phase of the algorithm: General summary of operations}
     \label{fig:algo-prediction}
 \end{figure}
-\subsection{Decision phase}
+\section{Decision phase}
 Once the prediction phase has been carried out for each slot in the prediction window, the algorithm decides on which AP to connect the user to. The algorithm selects the AP with the greatest average score as given by (\ref{eq:algo-decide}). Here $\alpha$ and $\beta$ represent the total number of Optical beams and the total number of RF APs as defined previously in Section\ref{subsubsec:param_init}. 
 \begin{equation}
         {choice} = \max(\frac{Score[i]}{\eta} \quad \forall i \in [0, \alpha + \beta)).
         \label{eq:algo-decide}
     \end{equation}
 
-\subsection{Algorithm Summary}
+\section{Algorithm Summary}
 Combining the individual components, we present a unified algorithm for both horizontal as well as vertical handovers as described by Algorithm ~\ref{alg:handover-complete}
 \begin{algorithm}
 \caption{Hybrid Handover Algorithm}
@@ -162,7 +154,7 @@ Combining the individual components, we present a unified algorithm for both hor
 % Remarks on style:
 
 % \begin{enumerate}
-% 	\item use `Section` name to refer to sections when citing (so Section~\ref{sec:SECTIONTITLE} not Sec.~\ref{sec:SECTIONTITLE} or Subsection~\ref{sec:SECTIONTITLE}); Same comment applies to Tables, Algorithms and Figures
+% 	\item use `Section` name to refer to sections when citing (so Section~\ref{sec:SECTIONTITLE} not Sec.~\ref{sec:SECTIONTITLE} or section~\ref{sec:SECTIONTITLE}); Same comment applies to Tables, Algorithms and Figures
 % 	\item Tables and figures must be at the top of the page---use [t] marker (not [h], for `here`); 
 % 	\item Every caption should end with a period;
 % 	\item Encapsulate equations in `()` brackets and do not add word `equation before` (therefore `in~(\ref{eq:EQUATION})`, not `in Equation~\ref{eq:EQUATION}` or in Eq.~\ref{eq:EQUATION});
