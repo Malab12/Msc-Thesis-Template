@@ -15,9 +15,9 @@ Before going in-depth into the algorithm's workings, we present a high-level ove
 \subsubsection{Inputs}
 \begin{itemize}
     \item \textbf{User position:} Coordinates of the UE based on the localization method described in Section~\ref{sec:loc_calc}
-    \item \textbf{User velocity:} Recorded by the UE as the change in position between two RSRP measurements.
-    \item \textbf{Current Serving AP/Beam:} The current optical beam or RF AP serving the UE before the handover procedure is initiated.
-    \item \textbf{RSRP report:} An array storing the RSRP measurements recorded by the user for every available serving beam and the RF AP
+    \item \textbf{User velocity:} Recorded by the UE as the change in position. 
+    \item \textbf{Current Serving AP/Beam:} The current optical beam or RF AP serving the UE when the handover procedure is initiated.
+    \item \textbf{RSRP report:} An array storing the RSRP measurements recorded by the user for every available optical beam which can be detected by the UE and the RF AP
 \end{itemize}
 \subsubsection{Outputs}
 The algorithm generates a single output:
@@ -43,51 +43,113 @@ The algorithm generates a single output:
 \subsection{Detailed explanation}
 \label{subsec:algo_exp}
 \subsubsection{Handover trigger}
-The handover algorithm follows a trigger-based strategy. This means that the handover process is only initiated when specific events or conditions are fulfilled. In this case, the specific trigger for initiating a handover is when RSRP measurements by the UE indicate that another beam/AP is providing a higher SINR. The optical and RF networks periodically send reference signals to the UE, which are then utilized to calculate the RSRP measurements. The reference signals by the optical network also allow for localization information to be tracked. The centers of the 3 beams providing the highest SINR act as the end points for triangulation. Since the reference signal is sent continuously with a set period interval, a change in location between two measurements provides the velocity. The UE reports back the RSRP map as well as the most recent values of position and velocity. When the conditions for the handover are met, the network utilizes the report from the UE as input to initiate the handover strategy. Figure~\ref{fig: handover-trigger} provides a graphical explanation of the handover trigger process.
+The handover algorithm follows a trigger-based strategy. This means that the handover process is only initiated when specific events occur or conditions are fulfilled. In this case, the specific trigger for initiating a handover is when RSRP measurements by the UE indicate that non-serving optical beam/RF AP is providing a higher SINR than that of the current serving optical beam or RF AP. The optical and RF networks periodically send reference signals, which are then utilized to calculate the RSRP measurements. The reference signals sent by the optical network also allow for the UE location to be tracked. The centers of the 3 beams providing the highest SINRs act as the end points for triangulation. Since the reference signals are sent continuously with a set period interval, a change in location between two consecutive measurements can be used to derive the velocity of the UE. The UE sends the RSRP measurements back to the network as an RSRP report. The network utilizes the UE measurement report to derive the most up-to-date location, velocity, and acceleration values. It then decides whether a handover process should be initiated. Figure~\ref{fig: handover-trigger} provides a graphical explanation of the handover trigger process.
 % 
 \begin{figure}
     \centering
-    \includegraphics[width=0.75\linewidth]{Figures/handover-trigger.png}
+    \includegraphics[width=1\linewidth]{Figures/Algorithm-design-Handover-trigger.drawio.pdf}
     \caption{Flowchart describing the handover trigger process}
     \label{fig: handover-trigger}
 \end{figure}
 
-\subsubsection{Parameter initialization}
-We first perform setup for certain parameters characterizing this specific instance of the handover strategy:
+\subsubsection{Parameters of the algorithm}
+\label{subsubsec:param_init}
+We first perform setup for certain parameters characterizing a specific instance of the handover algorithm. These parameters together impact and define the behavior of the selection logic:
 \begin{enumerate}
-    \item \textbf{Network selection coefficient $\lambda$:} Beyond a certain velocity of the user, it is no longer feasible for the optical network to adequately keep up with the user and provide consistent connectivity. In such situations it is imperative that the algorithm switch the UE to the RF Network. This is mathematically modeled by the network selection coefficient. It is a scaler which indicates the system's preference for the RF network over optical. Higher the velocity of the user, higher is the value of the scaler.
-    \item \textbf{Prediction window size $\eta$:} Vertical handovers require more time to perform due to the change in transmission interface. As such, the algorithm must be sure that it would still be most optimal for the user to be connected to the RF network by the time the handover completes. The prediction window size provides a dynamic way of adjusting how far in the future the algorithm will make estimations before making a decision. Vertical Handovers require a larger window size than horizontal handovers. 
-    \item \textbf{Prediction step size $t_{TTT}:$} Specifies the time interval between two predictions
-    \item \textbf{current time: $t_k:$} Record of the time when the handover process starts, subsequently records the time in the future at which each prediction occurs.
-    \item \textbf{current step i:} Starts at 0, specifies how many prediction steps have been taken
-    \item \textbf{Score:} Score is an array which keeps track of the SINR measurements throughout the execution of the algorithm. It is analyzed in the decision phase to determine which AP/beam to switch the user to.
-    \item \textbf{Decay constant d:} The further we move in the future, The more dependent the estimation becomes on previous predictions. In turn, the probability of the estimation deviating from ground reality increases. To compensate for such a potential error, We utilize exponential decay on the score per timeslot. Thus, as the predictions move further in the future, their impact on the score and thus the final decision reduces as well.
+    \item \textbf{Network selection coefficient $\lambda$:} Beyond a certain velocity of the user, it is no longer feasible for the optical network to adequately keep up with the user and provide consistent connectivity. In such situations, the algorithm must switch the UE to the RF Network. This is mathematically modeled by the network selection coefficient. It is a scalar that indicates the system's preference for the RF network over optical. Higher the velocity of the user, the higher is the value of the scaler.
+    \item \textbf{Prediction window size $\eta$:} Vertical handovers require more time to perform due to the change in transmission interface. As such, the algorithm must be sure that it would still be most optimal for the user to be connected to the RF network by the time the handover completes. The prediction window size provides a dynamic way of adjusting how far in advance the algorithm will make estimations before making a decision. Vertical Handovers require a larger window size than horizontal handovers. 
 \end{enumerate}
-
+\subsection{Initialization phase}
+When a handover condition is triggered, certain variables in the algorithm are initialized first. These are as follows:
+\begin{enumerate}
+    \item \textbf{Current step $k:$} For window size $\eta$, let $k$ represent the individual time-slot within the window where $1 \leq k \leq \eta$ and $k$ starts at 1. 
+    \item \textbf{Current time $t_k:$} represents the time recorded at the start of the k-th step 
+    \item \textbf{Prediction step size $t_{TTT}:$} Specifies the time interval between two consecutive predictions
+    \item \textbf{Score:} Score is an array that keeps track of the SINR measurements throughout the execution of the algorithm. It is analyzed in the decision phase to determine which AP/beam to switch the user to. Let $\alpha$ and $\beta$ represent the total number of Optical beams and the total number of RF APs in the system. Thus, Score is an array of length $(\alpha + \beta)$. Optical beams are identified by index $i \in [0, \alpha)$ while RF APs are identified by the index $i \in [\alpha, \alpha + \beta)$. Score is initialized as a null array containing all zeroes.
+    \item \textbf{Decay constant d:} further the algorithm moves in the future, the more dependent the estimation becomes on previous predictions. In turn, the probability of the estimation deviating from ground reality increases. To compensate for such a potential error, We utilize exponential decay on the score per timeslot. Thus, as the predictions move further in the future, their impact on the score and thus the final decision reduces as well.
+\end{enumerate}
 \subsection{Prediction phase}
-As long as we have not iterated through the entire prediction window $(i < \eta)$, for each step we do the following:
+As long as we have not iterated through the entire prediction window $(k < \eta)$, for each slot we do the following:
 \begin{enumerate}
-    \item Predict the location at the next time step. The short term prediction is given by (~\ref{eq:pred-loc})
+    \item Predict the location at the $k+1$th slot. The short-term prediction is given by (\ref{eq:algo_pred-loc}). Here, $v(t_k)$ and $a(t_k)$ represent the derived velocity and acceleration of the UE in slot $k$ respectively.
     \begin{equation}
-        p(t_k + t_{TTT}) \leftarrow p(t_k) + v(t_k) \times t_{TTT} + \frac{1}{2}a{t_k} \times t_{TTT}^2
-        \label{eq:pred-loc}
+        p(t_k + t_{TTT}) \leftarrow p(t_k) + v(t_k) \times t_{TTT} + \frac{1}{2}a(t_k) \times t_{TTT}^2.
+        \label{eq:algo_pred-loc}
     \end{equation}
-    \item Based on the predicted location we make an estimate of the SINR from each beam/AP. The SINR from the RF AP is scaled by the network selection coefficient as explained in Parameter initialization. These are utilized as the score for that AP/beam in this slot.
-    \item The score array is updated with the new values from this time slot after scaling them by the decay factor.
+    \item \textbf{SINR Estimation:} Based on the predicted location, the algorithm makes an estimate of the SINR from each optical beam/RF AP. 
+    \item \textbf{Measurement adjustment: } The SINR from the RF AP is scaled by the network selection coefficient as shown in (\ref{eq:algo_measurement-scale}). Here, $\gamma$ represents the adjusted value while $\lambda$ is the network selection coefficient.
+    \begin{equation}
+        \gamma = 
+\begin{cases} 
+\text{SINR} \quad &\text{for optical beam} \\
+\lambda \times \text{SINR} \quad &\text{for RF AP}
+\end{cases}
+\label{eq:algo_measurement-scale}
+    \end{equation}
+    \item \textbf{Score update:} The score array is updated as shown in (\ref{eq:algo_score_update}). Here, $\gamma$ is the adjusted measurement, $d$ is the decay constant and, $k$ is the current time slot. $\alpha$ and $\beta$ represent the total number of optical beams in the system and the total number of RF APs, respectively. 
+    \begin{equation}
+        Score[i] \leftarrow Score[i] + \gamma_i \times e^{-dk} \quad \text{for each } i \in [0, \alpha + \beta). 
+        \label{eq:algo_score_update}
+    \end{equation}
+
 \end{enumerate}
-Figure~\ref{fig:algo-prediction} showcases the operations that take place in each time-slot of the prediction window.
+Figure~\ref{fig:algo-prediction} showcases an overview of operations that take place in each time slot of the prediction window.
 \begin{figure}
     \centering
-    \includegraphics[width=1\linewidth]{Figures/algorithm-prediction-phase.png}
-    \caption{Prediction phase of the algorithm: showcasing operations conducted each time-slot}
+    \includegraphics[width=1\linewidth]{Figures/Algorithm-design.drawio.pdf}
+    \caption{Prediction phase of the algorithm: General summary of operations}
     \label{fig:algo-prediction}
 \end{figure}
 \subsection{Decision phase}
-Once the prediction phase has been carried out for each slot in the prediction window, the algorithm makes a decision on which AP to connect the user to. The algorithm selects the AP with the greatest average score as given by ().
+Once the prediction phase has been carried out for each slot in the prediction window, the algorithm decides on which AP to connect the user to. The algorithm selects the AP with the greatest average score as given by (\ref{eq:algo-decide}). Here $\alpha$ and $\beta$ represent the total number of Optical beams and the total number of RF APs as defined previously in Section\ref{subsubsec:param_init}. 
 \begin{equation}
-        {choice} = \max(\frac{score}{\eta})
+        {choice} = \max(\frac{Score[i]}{\eta} \quad \forall i \in [0, \alpha + \beta)).
         \label{eq:algo-decide}
     \end{equation}
+
+\subsection{Algorithm Summary}
+Combining the individual components, we present a unified algorithm for both horizontal as well as vertical handovers as described by Algorithm ~\ref{alg:handover-complete}
+\begin{algorithm}
+\caption{Hybrid Handover Algorithm}
+\label{alg:handover-complete}
+\begin{algorithmic}[1]
+\REQUIRE UE position, UE velocity, UE acceleration, Current serving AP/Beam
+\ENSURE Choice (A specific optical beam / RF AP)
+
+\STATE Initialize network selection coefficient $\lambda$ based on UE velocity
+\STATE Set prediction window size $\eta$
+\STATE $t_k \leftarrow$ current time
+\STATE $t_{TTT} \leftarrow$ interval between two consecutive time slots
+\STATE Score $\leftarrow$ array of zeros (size of num of optical beams + num of RF APs)
+\STATE Decay constant $d$
+
+\WHILE{$k < \eta$}
+    \STATE Predict location at the $k+1$th slot
+    \[
+    p(t_k + t_{TTT}) \leftarrow p(t_k) + v(t_k) \times t_{TTT} + \frac{1}{2}a(t_k) \times t_{TTT}^2.
+    \]
+    \STATE Estimate SINR based on predicted location
+    \STATE Adjust the estimated measurements:
+    \[
+    \gamma = 
+    \begin{cases} 
+    \text{SINR} \quad &\text{for optical beam} \\
+    \lambda \times \text{SINR} \quad &\text{for RF AP}
+    \end{cases}
+    \]
+    \STATE Update the score 
+    \[
+    \text{Score}[i] \leftarrow \text{Score}[i] + \gamma_i \times e^{-dk} \quad \text{for each } i \in [0, \alpha + \beta)
+    \]
+    \STATE $k \leftarrow k + 1$
+    \STATE $t_k \leftarrow t_k + t_{TTT}$
+\ENDWHILE
+
+\STATE Choice $\leftarrow \max\left(\frac{\text{Score}[i]}{\eta} \quad \forall i \in [0, \alpha + \beta)\right)$
+
+\RETURN Choice (A specific optical beam / RF AP)
+\end{algorithmic}
+\end{algorithm}
 % Define models with math, such that
 % %
 % \begin{equation}
