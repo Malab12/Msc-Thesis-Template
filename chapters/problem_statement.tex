@@ -1,10 +1,11 @@
 \chapter{Algorithm to optimize mobility management}
 \label{chp:problem_statement}
 
-This chapter describes the details and design considerations of the algorithm presented for solving the problem of optimal mobility management in narrow beam systems. The strategy operates separately for each user, optimizing for maximizing throughput and minimizing latency.
+This chapter describes the details and design considerations of the algorithm presented for solving the problem of optimal mobility management in narrow beam systems. The strategy operates separately for each user, optimizing for maximizing throughput and minimizing handover rate against the user's speed.
 \section{High level overview}
 Before going in-depth into the algorithm's workings, we present a high-level overview of the handover strategy, specifying the inputs and outputs of the system. Figure~\ref{fig:algo-overview} provides a high-level graphical algorithm overview. Section~\ref{subsec:algo_exp} explains each component in detail in the order of their execution.
 \subsection{Inputs}
+\label{subsec:algo-input}
 \begin{itemize}
     \item \textbf{User position:} Coordinates of the UE based on the localization method described in Section~\ref{sec:loc_calc}
     \item \textbf{User velocity:} Recorded by the UE as the change in position. 
