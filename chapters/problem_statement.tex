@@ -4,24 +4,32 @@
 This chapter describes the details and design considerations of the algorithm presented for solving the problem of optimal mobility management in narrow beam systems. The strategy operates separately for each user, optimizing for maximizing throughput and minimizing handover rate against the user's speed.
 \section{High level overview}
 Before going in-depth into the algorithm's workings, we present a high-level overview of the handover strategy, specifying the inputs and outputs of the system. Figure~\ref{fig:algo-overview} provides a high-level graphical algorithm overview. Section~\ref{subsec:algo_exp} explains each component in detail in the order of their execution.
-\subsection{Inputs}
+\subsection{Inputs and Outputs of the Algorithm}
+\subsubsection{Inputs}
 \label{subsec:algo-input}
 \begin{itemize}
-    \item \textbf{User position:} Coordinates of the UE based on the localization method described in Section~\ref{sec:loc_calc}
+    \item \textbf{User position:} Coordinates of the UE based on the localization method described in Section~\ref{sec:mod-user-loc}
     \item \textbf{User velocity:} Recorded by the UE as the change in position. 
     \item \textbf{Current Serving AP/Beam:} The current optical beam or RF AP serving the UE when the handover procedure is initiated.
     \item \textbf{RSRP report:} An array storing the RSRP measurements recorded by the user for every available optical beam which can be detected by the UE and the RF AP
 \end{itemize}
-\subsection{Outputs}
+\subsubsection{Outputs}
 The algorithm generates a single output:
 \begin{itemize}
     \item \textbf{Choice:} the specific AP which the user needs to be switched to to maintain consistent connectivity with the network.
 \end{itemize}
-
+\subsection{Components of the Algorithm}
+Broadly, the operations taking place during a single run of the algorithm can be categorized into the following phases:
+\begin{itemize}
+    \item \textbf{Handover Trigger:} This step specifies the preconditions for the handover to take place. It is also the step where the inputs necessary for the handover are derived or extracted from the UE.
+    \item \textbf{Initialization Phase:} This step specifies the setup of certain parameters which dictate the behavior of the algorithm for this run. In addition, this step also initializes particular variables.
+    \item \textbf{Prediction Phase:} This step specifies the operations that take place at each time-step across the prediction window. UE position is estimated based on which SINR is predicted. This predicted SINR is then used for evaluating the viability of all the optical beams/ RF APs for connection.
+    \item \textbf{Decision Phase:} After predictions have been made for every time step within the prediction window, the decision phase then evaluates the score accrued by each Optical beam/ RF AP and makes the final choice of which Optical beam/ RF AP to connect the UE to.
+\end{itemize}
 \begin{figure}
     \centering
-    \includegraphics[width=1\linewidth]{Figures/algo-overview.png}
-    \caption{High-level overview of algorithm inputs/outputs and components}
+    \includegraphics[width=1\linewidth]{Figures/Algorithm-design-High level overview.drawio.pdf}
+    \caption{High-level overview of the phases of the algorithm}
     \label{fig:algo-overview}
 \end{figure}
 
@@ -52,16 +60,16 @@ We first perform setup for certain parameters characterizing a specific instance
     \item \textbf{Network selection coefficient $\lambda$:} Beyond a certain velocity of the user, it is no longer feasible for the optical network to adequately keep up with the user and provide consistent connectivity. In such situations, the algorithm must switch the UE to the RF Network. This is mathematically modeled by the network selection coefficient. It is a scalar that indicates the system's preference for the RF network over optical. Higher the velocity of the user, the higher is the value of the scaler.
     \item \textbf{Prediction window size $\eta$:} Vertical handovers require more time to perform due to the change in transmission interface. As such, the algorithm must be sure that it would still be most optimal for the user to be connected to the RF network by the time the handover completes. The prediction window size provides a dynamic way of adjusting how far in advance the algorithm will make estimations before making a decision. Vertical Handovers require a larger window size than horizontal handovers. 
 \end{enumerate}
-\section{Initialization phase}
+\subsection{Initialization phase}
 When a handover condition is triggered, certain variables in the algorithm are initialized first. These are as follows:
 \begin{enumerate}
     \item \textbf{Current step $k:$} For window size $\eta$, let $k$ represent the individual time-slot within the window where $1 \leq k \leq \eta$ and $k$ starts at 1. 
     \item \textbf{Current time $t_k:$} represents the time recorded at the start of the k-th step 
     \item \textbf{Prediction step size $t_{TTT}:$} Specifies the time interval between two consecutive predictions
     \item \textbf{Score:} Score is an array that keeps track of the SINR measurements throughout the execution of the algorithm. It is analyzed in the decision phase to determine which AP/beam to switch the user to. Let $\alpha$ and $\beta$ represent the total number of Optical beams and the total number of RF APs in the system. Thus, Score is an array of length $(\alpha + \beta)$. Optical beams are identified by index $i \in [0, \alpha)$ while RF APs are identified by the index $i \in [\alpha, \alpha + \beta)$. Score is initialized as a null array containing all zeroes.
-    \item \textbf{Decay constant d:} further the algorithm moves in the future, the more dependent the estimation becomes on previous predictions. In turn, the probability of the estimation deviating from ground reality increases. To compensate for such a potential error, We utilize exponential decay on the score per timeslot. Thus, as the predictions move further in the future, their impact on the score and thus the final decision reduces as well.
+    \item \textbf{Decay constant d:} The further the algorithm moves in the future, the more dependent the location estimation becomes on previous predictions. In turn, the probability of the location estimation deviating from ground reality increases. To compensate for such a potential error, We utilize exponential decay on the score per timeslot. Thus, as the predictions move further in the future, their impact on the score and thus the final decision reduces as well. To optimize the vertical handover process, it is necessary to adjust the decay constant $d$ in conjunction with the prediction window size. This adjustment aims to identify the optimal combination that allows for sufficient foresight into future events while appropriately weighting these future predictions. The goal is to ensure that these predictions neither exert zero influence on the final outcome nor have the same level of impact as more accurate, near-term predictions.
 \end{enumerate}
-\section{Prediction phase}
+\subsection{Prediction phase}
 As long as we have not iterated through the entire prediction window $(k < \eta)$, for each slot we do the following:
 \begin{enumerate}
     \item Predict the location at the $k+1$th slot. The short-term prediction is given by (\ref{eq:algo_pred-loc}). Here, $v(t_k)$ and $a(t_k)$ represent the derived velocity and acceleration of the UE in slot $k$ respectively.
@@ -93,14 +101,14 @@ Figure~\ref{fig:algo-prediction} showcases an overview of operations that take p
     \caption{Prediction phase of the algorithm: General summary of operations}
     \label{fig:algo-prediction}
 \end{figure}
-\section{Decision phase}
-Once the prediction phase has been carried out for each slot in the prediction window, the algorithm decides on which AP to connect the user to. The algorithm selects the AP with the greatest average score as given by (\ref{eq:algo-decide}). Here $\alpha$ and $\beta$ represent the total number of Optical beams and the total number of RF APs as defined previously in Section\ref{subsubsec:param_init}. 
+\subsection{Decision phase}
+Once the prediction phase has been carried out for each slot in the prediction window, the algorithm decides on which AP to connect the user to. The algorithm selects the AP with the greatest score across the entire prediction window as given by (\ref{eq:algo-decide}). Here $\alpha$ and $\beta$ represent the total number of Optical beams and the total number of RF APs as defined previously in Section\ref{subsubsec:param_init}. 
 \begin{equation}
-        {choice} = \max(\frac{Score[i]}{\eta} \quad \forall i \in [0, \alpha + \beta)).
+        {choice} = \arg \max({Score}[i] \quad \forall i \in [0, \alpha + \beta)).
         \label{eq:algo-decide}
     \end{equation}
 
-\section{Algorithm Summary}
+\section{Pseudo code}
 Combining the individual components, we present a unified algorithm for both horizontal as well as vertical handovers as described by Algorithm ~\ref{alg:handover-complete}
 \begin{algorithm}
 \caption{Hybrid Handover Algorithm}
@@ -138,7 +146,7 @@ Combining the individual components, we present a unified algorithm for both hor
     \STATE $t_k \leftarrow t_k + t_{TTT}$
 \ENDWHILE
 
-\STATE Choice $\leftarrow \max\left(\frac{\text{Score}[i]}{\eta} \quad \forall i \in [0, \alpha + \beta)\right)$
+\STATE Choice $\leftarrow \arg \max\left(\text{Score}[i] \quad \forall i \in [0, \alpha + \beta)\right)$
 
 \RETURN Choice (A specific optical beam / RF AP)
 \end{algorithmic}
